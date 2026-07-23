@@ -1,0 +1,10 @@
+const express=require('express'),cors=require('cors'),{createServer}=require('http');
+require('dotenv').config();
+const{initDb}=require('./db'),{setupWss}=require('./websocket');
+const app=express();app.use(cors());app.use(express.json());
+app.use('/api/auth',require('./routes/auth'));
+app.use('/api/projects',require('./routes/projects'));
+app.get('/health',(_,res)=>res.json({status:'ok'}));
+const server=createServer(app);setupWss(server);initDb();
+server.listen(process.env.PORT||4000,()=>console.log(`Backend :${process.env.PORT||4000}`));
+module.exports={app};
