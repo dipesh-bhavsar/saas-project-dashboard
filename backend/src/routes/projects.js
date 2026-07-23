@@ -1,0 +1,7 @@
+const express=require('express'),{getDb}=require('../db'),{requireAuth}=require('../middleware/auth'),{broadcast}=require('../websocket');
+const router=express.Router();router.use(requireAuth);
+router.get('/',(req,res)=>res.json({projects:getDb().prepare('SELECT * FROM projects ORDER BY updated_at DESC').all()}));
+router.post('/',(req,res)=>{const{name,client,budget_total,start_date,end_date}=req.body;const r=getDb().prepare('INSERT INTO projects(name,client,budget_total,start_date,end_date,owner_id)VALUES(?,?,?,?,?,?)').run(name,client,budget_total||0,start_date,end_date,req.user.userId);const project=getDb().prepare('SELECT * FROM projects WHERE id=?').get(r.lastInsertRowid);broadcast({type:'project_created',project});res.status(201).json(project);});
+router.patch('/:id',(req,res)=>{const{status,budget_used,sprint_velocity,risk_count}=req.body;getDb().prepare('UPDATE projects SET status=COALESCE(?,status),budget_used=COALESCE(?,budget_used),sprint_velocity=COALESCE(?,sprint_velocity),risk_count=COALESCE(?,risk_count),updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status,budget_used,sprint_velocity,risk_count,req.params.id);const project=getDb().prepare('SELECT * FROM projects WHERE id=?').get(req.params.id);broadcast({type:'project_updated',project});res.json(project);});
+router.delete('/:id',(req,res)=>{getDb().prepare('DELETE FROM projects WHERE id=?').run(req.params.id);broadcast({type:'project_deleted',id:Number(req.params.id)});res.json({deleted:true});});
+module.exports=router;
